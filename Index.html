@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Income Tax Calculator</title>
+<style>
+body { font-family: sans-serif; }
+#container { width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; }
+label { display: block; margin-bottom: 5px; }
+input[type="number"] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+#results { margin-top: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; border: 1px solid #ddd; text-align: right; } /* Align numbers to the right */
+th { text-align: left; } /* Align headers to the left */
+
+</style>
+</head>
+<body>
+
+<div id="container">
+  <h2>Income Tax Calculator</h2>
+  <label for="income">Enter Annual Income:</label>
+  <input type="number" id="income" name="income" min="0">
+  <button onclick="calculateTax()">Calculate</button>
+
+  <div id="results">
+    <table>
+      <thead>
+        <tr>
+          <th>Regime</th>
+          <th>Slab</th>
+          <th>Income in Slab</th>
+          <th>Tax Rate</th>
+          <th>Tax Amount</th>
+        </tr>
+      </thead>
+      <tbody id="newRegimeSlabs">
+        </tbody>
+      <tbody id="oldRegimeSlabs">
+        </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function calculateTax() {
+  const income = parseFloat(document.getElementById("income").value);
+
+  const newRegimeSlabs = calculateNewRegimeSlabs(income);
+  const oldRegimeSlabs = calculateOldRegimeSlabs(income);
+
+  populateSlabTable("newRegimeSlabs", newRegimeSlabs);
+  populateSlabTable("oldRegimeSlabs", oldRegimeSlabs);
+}
+
+function populateSlabTable(tableId, slabs) {
+    const tableBody = document.getElementById(tableId);
+    tableBody.innerHTML = ""; // Clear previous rows
+
+    let totalTax = 0;
+    slabs.forEach(slab => {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = slab.regime;
+        row.insertCell().textContent = slab.slab;
+        row.insertCell().textContent = slab.incomeInSlab.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+        row.insertCell().textContent = slab.taxRate + "%";
+        row.insertCell().textContent = slab.taxAmount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+        totalTax += slab.taxAmount;
+    });
+
+    // Add a total row:
+    const totalRow = tableBody.insertRow();
+    const totalCell = totalRow.insertCell();
+    totalCell.colSpan = 4; // Span across 4 columns
+    totalCell.style.fontWeight = "bold";
+    totalCell.style.textAlign = "right"; // Align to the right
+    totalCell.textContent = "Total Tax:";
+
+    const totalTaxCell = totalRow.insertCell();
+    totalTaxCell.style.fontWeight = "bold";
+    totalTaxCell.style.textAlign = "right";
+    totalTaxCell.textContent = totalTax.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+}
+
+
+function calculateNewRegimeSlabs(income) {
+  const slabs = [];
+  let taxableIncome = income - 75000;
+  if(taxableIncome < 0) taxableIncome = 0;
+  let remainingIncome = taxableIncome;
+
+  const slabDefinitions = [
+      { limit: 400000, rate: 0 },
+      { limit: 800000, rate: 5 },
+      { limit: 1200000, rate: 10 },
+      { limit: 1600000, rate: 15 },
+      { limit: 2000000, rate: 20 },
+      { limit: 2400000, rate: 25 },
+      { limit: Infinity, rate: 30 }
+  ];
+
+  slabDefinitions.forEach(slabDef => {
+    const slabIncome = Math.min(remainingIncome, slabDef.limit - (slabs.length > 0 ? slabDefinitions[slabs.length - 1].limit : 0));
+    if(slabIncome > 0) {
+        const taxAmount = slabIncome * (slabDef.rate / 100);
+        slabs.push({
+            regime: "New",
+            slab: (slabs.length > 0 ? `₹${slabDefinitions[slabs.length - 1].limit + 1} - ₹${slabDef.limit}` : `₹0 - ₹${slabDef.limit}`),
+            incomeInSlab: slabIncome,
+            taxRate: slabDef.rate,
+            taxAmount: taxAmount
+        });
+        remainingIncome -= slabIncome;
+    }
+  });
+  return slabs;
+}
+
+function calculateOldRegimeSlabs(income) {
+    const slabs = [];
+    let remainingIncome = income;
+
+    const slabDefinitions = [
+        { limit: 250000, rate: 0 },
+        { limit: 500000, rate: 5 },
+        { limit: 1000000, rate: 20 },
+        { limit: Infinity, rate: 30 }
+    ];
+
+    slabDefinitions.forEach(slabDef => {
+        const slabIncome = Math.min(remainingIncome, slabDef.limit - (slabs.length > 0 ? slabDefinitions[slabs.length - 1].limit : 0));
+        if(slabIncome > 0) {
+            const taxAmount = slabIncome * (slabDef.rate / 100);
+            slabs.push({
+                regime: "Old",
+                slab: (slabs.length > 0 ? `₹${slabDefinitions[slabs.length - 1].limit + 1} - ₹${slabDef.limit}` : `₹0 - ₹${slabDef.limit}`),
+                incomeInSlab: slabIncome,
+                taxRate: slabDef.rate,
+                taxAmount: taxAmount
+            });
+            remainingIncome -= slabIncome;
+        }
+    });
+    return slabs;
+}
+
+</script>
+
+</body>
+</html>
